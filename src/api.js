@@ -1,13 +1,22 @@
 import { supabase } from "./supabaseClient";
 
 /**
- * Fetch all expeditions, ordered by sort_order then created_at.
- */
-/**
  * NOTE: The DB uses "status" instead of "column" because "column" is
  * a reserved word in PostgreSQL. The mappers below translate between
  * DB rows (status) and app cards (column) automatically.
+ *
+ * All queries are automatically scoped to the logged-in user via
+ * Supabase Row Level Security (RLS).
  */
+
+/**
+ * Get the current user's ID from the session.
+ */
+async function getUserId() {
+  const { data } = await supabase.auth.getSession();
+  return data?.session?.user?.id ?? null;
+}
+
 export async function fetchExpeditions() {
   const { data, error } = await supabase
     .from("expeditions")
@@ -16,16 +25,12 @@ export async function fetchExpeditions() {
     .order("created_at", { ascending: true });
 
   if (error) throw error;
-
-  // Map DB rows → app card shape
   return (data || []).map(rowToCard);
 }
 
-/**
- * Insert a new expedition. Returns the created card.
- */
 export async function createExpedition(card) {
-  const row = cardToRow(card);
+  const userId = await getUserId();
+  const row = cardToRow(card, userId);
   const { data, error } = await supabase
     .from("expeditions")
     .insert(row)
@@ -36,12 +41,10 @@ export async function createExpedition(card) {
   return rowToCard(data);
 }
 
-/**
- * Update an existing expedition by id.
- */
 export async function updateExpedition(id, updates) {
   const row = cardToRow({ id, ...updates });
   delete row.created_at;
+  delete row.user_id; // Don't update user_id
 
   const { data, error } = await supabase
     .from("expeditions")
@@ -102,8 +105,8 @@ function rowToCard(row) {
   };
 }
 
-function cardToRow(card) {
-  return {
+function cardToRow(card, userId) {
+  const row = {
     ...(card.id && !String(card.id).match(/^\d{13}$/) && !String(card.id).startsWith("temp-") ? { id: card.id } : {}),
     status: card.column,       // app "column" → DB "status"
     continent: card.continent,
@@ -116,4 +119,6 @@ function cardToRow(card) {
     rating: card.rating || null,
     sort_order: card.sort_order ?? 0,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }

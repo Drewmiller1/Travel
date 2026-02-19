@@ -6,6 +6,7 @@ import {
   deleteExpedition,
   bulkUpdateOrder,
 } from "./api";
+import { signOut } from "./auth";
 
 const COLUMNS = [
   { id: "dreams", title: "DREAM DESTINATIONS", icon: "🗺️", subtitle: "Uncharted Territory" },
@@ -32,7 +33,7 @@ const TAG_COLORS = {
 };
 const getTagColor = (tag) => TAG_COLORS[tag] || "#5c4010";
 
-export default function VacationPlanner() {
+export default function VacationPlanner({ user, onSignOut }) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -465,6 +466,25 @@ export default function VacationPlanner() {
                 <div style={{ fontSize: "10px", fontWeight: "600", letterSpacing: "1.5px", color: "#5a4828", textTransform: "uppercase" }}>{s.label}</div>
               </div>
             ))}
+            {/* User & Sign Out */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "4px", paddingLeft: "16px", borderLeft: "1px solid rgba(100,80,20,0.15)" }}>
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: "11px", fontWeight: "600", color: "#3d2a08", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Explorer"}</div>
+                <div style={{ fontSize: "9px", color: "#8a7a58", letterSpacing: "1px", textTransform: "uppercase" }}>ADVENTURER</div>
+              </div>
+              <button onClick={async () => { await signOut(); onSignOut?.(); }}
+                style={{
+                  padding: "6px 12px", fontSize: "10px", fontWeight: "700",
+                  background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)",
+                  borderRadius: "5px", color: "#8a1a1a", cursor: "pointer",
+                  letterSpacing: "1px", textTransform: "uppercase",
+                  fontFamily: "'Courier New', monospace", transition: "all 0.2s",
+                  whiteSpace: "nowrap",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.12)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.35)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.06)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.2)"; }}
+              >🚪 Sign Out</button>
+            </div>
           </div>
         </div>
       </header>
