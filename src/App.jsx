@@ -31,7 +31,7 @@ export default function App() {
         fontFamily: "'Georgia', serif",
       }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "48px", animation: "float 2s ease-in-out infinite", marginBottom: "16px" }}>🏺</div>
+          <div style={{ fontSize: "48px", animation: "float 2s ease-in-out infinite", marginBottom: "16px" }}>ðŸº</div>
           <div style={{ fontSize: "14px", color: "#7a5c1a", letterSpacing: "3px", textTransform: "uppercase" }}>
             Checking credentials...
           </div>

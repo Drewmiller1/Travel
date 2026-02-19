@@ -5,6 +5,8 @@ import {
   updateExpedition,
   deleteExpedition,
   bulkUpdateOrder,
+  fetchUserSettings,
+  updateUserSettings,
 } from "./api";
 import { signOut } from "./auth";
 
@@ -33,6 +35,50 @@ const TAG_COLORS = {
 };
 const getTagColor = (tag) => TAG_COLORS[tag] || "#5c4010";
 
+/* ── Well-known locations for quick coordinate lookup ── */
+const LOCATION_PRESETS = [
+  { name: "Paris, France", lat: 48.8566, lng: 2.3522 },
+  { name: "Tokyo, Japan", lat: 35.6762, lng: 139.6503 },
+  { name: "New York, USA", lat: 40.7128, lng: -74.0060 },
+  { name: "London, UK", lat: 51.5074, lng: -0.1278 },
+  { name: "Rome, Italy", lat: 41.9028, lng: 12.4964 },
+  { name: "Sydney, Australia", lat: -33.8688, lng: 151.2093 },
+  { name: "Cairo, Egypt", lat: 30.0444, lng: 31.2357 },
+  { name: "Rio de Janeiro, Brazil", lat: -22.9068, lng: -43.1729 },
+  { name: "Cape Town, South Africa", lat: -33.9249, lng: 18.4241 },
+  { name: "Machu Picchu, Peru", lat: -13.1631, lng: -72.5450 },
+  { name: "Petra, Jordan", lat: 30.3285, lng: 35.4444 },
+  { name: "Kyoto, Japan", lat: 35.0116, lng: 135.7681 },
+  { name: "Barcelona, Spain", lat: 41.3874, lng: 2.1686 },
+  { name: "Bangkok, Thailand", lat: 13.7563, lng: 100.5018 },
+  { name: "Reykjavik, Iceland", lat: 64.1466, lng: -21.9426 },
+  { name: "Istanbul, Turkey", lat: 41.0082, lng: 28.9784 },
+  { name: "Marrakech, Morocco", lat: 31.6295, lng: -7.9811 },
+  { name: "Buenos Aires, Argentina", lat: -34.6037, lng: -58.3816 },
+  { name: "Dubai, UAE", lat: 25.2048, lng: 55.2708 },
+  { name: "Cusco, Peru", lat: -13.5320, lng: -71.9675 },
+  { name: "Athens, Greece", lat: 37.9838, lng: 23.7275 },
+  { name: "Bali, Indonesia", lat: -8.3405, lng: 115.0920 },
+  { name: "Grand Canyon, USA", lat: 36.1069, lng: -112.1129 },
+  { name: "Serengeti, Tanzania", lat: -2.3333, lng: 34.8333 },
+  { name: "Great Barrier Reef, Australia", lat: -18.2871, lng: 147.6992 },
+  { name: "Santorini, Greece", lat: 36.3932, lng: 25.4615 },
+  { name: "Angkor Wat, Cambodia", lat: 13.4125, lng: 103.8670 },
+  { name: "Banff, Canada", lat: 51.1784, lng: -115.5708 },
+  { name: "Queenstown, New Zealand", lat: -45.0312, lng: 168.6626 },
+  { name: "Havana, Cuba", lat: 23.1136, lng: -82.3666 },
+  { name: "Lisbon, Portugal", lat: 38.7223, lng: -9.1393 },
+  { name: "Prague, Czech Republic", lat: 50.0755, lng: 14.4378 },
+  { name: "Nairobi, Kenya", lat: -1.2921, lng: 36.8219 },
+  { name: "Mexico City, Mexico", lat: 19.4326, lng: -99.1332 },
+  { name: "Chiang Mai, Thailand", lat: 18.7883, lng: 98.9853 },
+  { name: "Dubrovnik, Croatia", lat: 42.6507, lng: 18.0944 },
+  { name: "Patagonia, Argentina", lat: -41.8101, lng: -68.9063 },
+  { name: "Galápagos Islands, Ecuador", lat: -0.9538, lng: -90.9656 },
+  { name: "Amalfi Coast, Italy", lat: 40.6340, lng: 14.6027 },
+  { name: "Yellowstone, USA", lat: 44.4280, lng: -110.5885 },
+];
+
 export default function VacationPlanner({ user, onSignOut }) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,18 +89,34 @@ export default function VacationPlanner({ user, onSignOut }) {
   const [showModal, setShowModal] = useState(false);
   const [editCard, setEditCard] = useState(null);
   const [expandedCard, setExpandedCard] = useState(null);
-  const [collapsedRows, setCollapsedRows] = useState(new Set());
-  const [swimlanes, setSwimlanes] = useState(true);
-  const [formData, setFormData] = useState({ title: "", description: "", budget: "", dates: "", tags: "", column: "dreams", continent: "north_america", rating: null });
+  const [formData, setFormData] = useState({ title: "", description: "", budget: "", dates: "", tags: "", column: "dreams", continent: "north_america", rating: null, latitude: "", longitude: "" });
   const [animatingCards, setAnimatingCards] = useState(new Set());
   const reorderTimeoutRef = useRef(null);
+
+  /* ── Editable board title / subtitle ── */
+  const [boardTitle, setBoardTitle] = useState("THE ADVENTURE LEDGER");
+  const [boardSubtitle, setBoardSubtitle] = useState("Fortune & Glory Vacation Planner");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [editingSubtitle, setEditingSubtitle] = useState(false);
+  const titleInputRef = useRef(null);
+  const subtitleInputRef = useRef(null);
+  const titleSaveTimeout = useRef(null);
+
+  /* ── Location search state ── */
+  const [locationQuery, setLocationQuery] = useState("");
+  const [locationResults, setLocationResults] = useState([]);
 
   /* ── Load from Supabase on mount ── */
   useEffect(() => {
     (async () => {
       try {
-        const data = await fetchExpeditions();
+        const [data, settings] = await Promise.all([
+          fetchExpeditions(),
+          fetchUserSettings(),
+        ]);
         setCards(data);
+        if (settings?.board_title) setBoardTitle(settings.board_title);
+        if (settings?.board_subtitle) setBoardSubtitle(settings.board_subtitle);
       } catch (err) {
         console.error("Failed to load expeditions:", err);
         setLoadError(err.message || "Failed to load data");
@@ -63,6 +125,43 @@ export default function VacationPlanner({ user, onSignOut }) {
       }
     })();
   }, []);
+
+  /* ── Focus input when editing title/subtitle ── */
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) titleInputRef.current.focus();
+  }, [editingTitle]);
+  useEffect(() => {
+    if (editingSubtitle && subtitleInputRef.current) subtitleInputRef.current.focus();
+  }, [editingSubtitle]);
+
+  /* ── Debounced save for title/subtitle ── */
+  const saveBoardSettings = useCallback((title, subtitle) => {
+    if (titleSaveTimeout.current) clearTimeout(titleSaveTimeout.current);
+    setSaveStatus("saving");
+    titleSaveTimeout.current = setTimeout(async () => {
+      try {
+        await updateUserSettings({ board_title: title, board_subtitle: subtitle });
+        setSaveStatus("saved");
+      } catch (err) {
+        console.error("Failed to save settings:", err);
+        setSaveStatus("error");
+      }
+    }, 800);
+  }, []);
+
+  const handleTitleBlur = () => {
+    setEditingTitle(false);
+    const val = boardTitle.trim() || "THE ADVENTURE LEDGER";
+    setBoardTitle(val);
+    saveBoardSettings(val, boardSubtitle);
+  };
+
+  const handleSubtitleBlur = () => {
+    setEditingSubtitle(false);
+    const val = boardSubtitle.trim() || "Fortune & Glory Vacation Planner";
+    setBoardSubtitle(val);
+    saveBoardSettings(boardTitle, val);
+  };
 
   /* ── Debounced bulk reorder save ── */
   const saveReorder = useCallback((updatedCards) => {
@@ -82,31 +181,58 @@ export default function VacationPlanner({ user, onSignOut }) {
     }, 800);
   }, []);
 
-  const toggleRow = (continentId) => {
-    setCollapsedRows(prev => { const n = new Set(prev); n.has(continentId) ? n.delete(continentId) : n.add(continentId); return n; });
-  };
-
-  const openAddModal = (columnId, continentId) => {
+  const openAddModal = (columnId) => {
     setEditCard(null);
-    setFormData({ title: "", description: "", budget: "", dates: "", tags: "", column: columnId, continent: continentId || "north_america", rating: null });
+    setFormData({ title: "", description: "", budget: "", dates: "", tags: "", column: columnId, continent: "north_america", rating: null, latitude: "", longitude: "" });
+    setLocationQuery("");
+    setLocationResults([]);
     setShowModal(true);
   };
 
   const openEditModal = (card) => {
     setEditCard(card);
-    setFormData({ title: card.title, description: card.description, budget: card.budget, dates: card.dates, tags: card.tags.join(", "), column: card.column, continent: card.continent, rating: card.rating });
+    setFormData({
+      title: card.title, description: card.description, budget: card.budget,
+      dates: card.dates, tags: card.tags.join(", "), column: card.column,
+      continent: card.continent, rating: card.rating,
+      latitude: card.latitude ?? "", longitude: card.longitude ?? "",
+    });
+    setLocationQuery("");
+    setLocationResults([]);
     setShowModal(true);
+  };
+
+  /* ── Location search against presets ── */
+  const handleLocationSearch = (query) => {
+    setLocationQuery(query);
+    if (!query.trim()) {
+      setLocationResults([]);
+      return;
+    }
+    const q = query.toLowerCase();
+    const matches = LOCATION_PRESETS.filter(loc =>
+      loc.name.toLowerCase().includes(q)
+    ).slice(0, 8);
+    setLocationResults(matches);
+  };
+
+  const selectLocation = (loc) => {
+    setFormData(p => ({ ...p, latitude: loc.lat, longitude: loc.lng }));
+    setLocationQuery(loc.name);
+    setLocationResults([]);
   };
 
   /* ── Save (create or update) ── */
   const saveCard = async () => {
     if (!formData.title.trim()) return;
     const tagArray = formData.tags.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
+    const lat = formData.latitude === "" ? null : parseFloat(formData.latitude);
+    const lng = formData.longitude === "" ? null : parseFloat(formData.longitude);
     setSaveStatus("saving");
 
     try {
       if (editCard) {
-        const updated = await updateExpedition(editCard.id, { ...formData, tags: tagArray });
+        const updated = await updateExpedition(editCard.id, { ...formData, tags: tagArray, latitude: lat, longitude: lng });
         setCards(prev => prev.map(c => c.id === editCard.id ? { ...c, ...updated } : c));
       } else {
         const tempId = `temp-${Date.now()}`;
@@ -114,14 +240,12 @@ export default function VacationPlanner({ user, onSignOut }) {
           id: tempId, column: formData.column, continent: formData.continent,
           title: formData.title, description: formData.description, image: "🗺️",
           budget: formData.budget, dates: formData.dates, tags: tagArray, rating: formData.rating,
-          sort_order: cards.length,
+          sort_order: cards.length, latitude: lat, longitude: lng,
         };
-        // Optimistic: show immediately
         setAnimatingCards(prev => new Set([...prev, tempId]));
         setCards(prev => [...prev, newCard]);
         setTimeout(() => setAnimatingCards(prev => { const n = new Set(prev); n.delete(tempId); return n; }), 500);
 
-        // Persist and replace temp id with real UUID
         const created = await createExpedition(newCard);
         setCards(prev => prev.map(c => c.id === tempId ? created : c));
       }
@@ -148,12 +272,12 @@ export default function VacationPlanner({ user, onSignOut }) {
   };
 
   /* ── Reorder logic ── */
-  const reorderCards = useCallback((dragId, targetCardId, position, newCol, newCont) => {
+  const reorderCards = useCallback((dragId, targetCardId, position, newCol) => {
     setCards(prev => {
       const dragged = prev.find(c => c.id === dragId);
       if (!dragged) return prev;
       const without = prev.filter(c => c.id !== dragId);
-      const updated = { ...dragged, column: newCol ?? dragged.column, continent: newCont ?? dragged.continent };
+      const updated = { ...dragged, column: newCol ?? dragged.column };
       if (targetCardId) {
         const idx = without.findIndex(c => c.id === targetCardId);
         if (idx === -1) return [...without, updated];
@@ -180,12 +304,12 @@ export default function VacationPlanner({ user, onSignOut }) {
     setDropTarget(prev => (prev?.cardId === card.id && prev?.position === pos) ? prev : { cardId: card.id, position: pos });
   }, []);
 
-  const handleCardDrop = useCallback((e, card, newCol, newCont) => {
+  const handleCardDrop = useCallback((e, card, newCol) => {
     e.preventDefault(); e.stopPropagation();
     if (!draggedCard || draggedCard.id === card.id) { setDraggedCard(null); setDropTarget(null); return; }
     const rect = e.currentTarget.getBoundingClientRect();
     const pos = e.clientY < rect.top + rect.height / 2 ? "before" : "after";
-    reorderCards(draggedCard.id, card.id, pos, newCol, newCont);
+    reorderCards(draggedCard.id, card.id, pos, newCol);
     setDraggedCard(null); setDropTarget(null);
   }, [draggedCard, reorderCards]);
 
@@ -196,13 +320,7 @@ export default function VacationPlanner({ user, onSignOut }) {
 
   const handleZoneDropFlat = useCallback((e, colId) => {
     e.preventDefault();
-    if (draggedCard) reorderCards(draggedCard.id, null, "end", colId, undefined);
-    setDraggedCard(null); setDropTarget(null);
-  }, [draggedCard, reorderCards]);
-
-  const handleZoneDropCell = useCallback((e, colId, contId) => {
-    e.preventDefault();
-    if (draggedCard) reorderCards(draggedCard.id, null, "end", colId, contId);
+    if (draggedCard) reorderCards(draggedCard.id, null, "end", colId);
     setDraggedCard(null); setDropTarget(null);
   }, [draggedCard, reorderCards]);
 
@@ -245,15 +363,16 @@ export default function VacationPlanner({ user, onSignOut }) {
     );
   };
 
-  const renderCard = (card, showRegion, colId, contId) => {
+  const renderCard = (card, colId) => {
     const cont = CONT_MAP[card.continent];
     const isDropBefore = dropTarget?.cardId === card.id && dropTarget?.position === "before" && draggedCard?.id !== card.id;
     const isDropAfter = dropTarget?.cardId === card.id && dropTarget?.position === "after" && draggedCard?.id !== card.id;
+    const hasCoords = card.latitude != null && card.longitude != null;
     return (
       <div key={card.id}>
         {isDropBefore && <DropIndicator />}
         <div draggable onDragStart={() => handleDragStart(card)} onDragEnd={handleDragEnd}
-          onDragOver={(e) => handleCardDragOver(e, card)} onDrop={(e) => handleCardDrop(e, card, colId, contId)}
+          onDragOver={(e) => handleCardDragOver(e, card)} onDrop={(e) => handleCardDrop(e, card, colId)}
           onClick={() => setExpandedCard(expandedCard?.id === card.id ? null : card)}
           style={{
             background: "linear-gradient(135deg, #fffdf5 0%, #f7f0dc 100%)",
@@ -266,7 +385,7 @@ export default function VacationPlanner({ user, onSignOut }) {
           onMouseEnter={(e) => { if (!draggedCard) { e.currentTarget.style.border = "1px solid rgba(120,90,20,0.35)"; e.currentTarget.style.boxShadow = "0 3px 12px rgba(100,80,20,0.12)"; }}}
           onMouseLeave={(e) => { if (!draggedCard) { e.currentTarget.style.border = "1px solid rgba(120,90,20,0.18)"; e.currentTarget.style.boxShadow = "0 1px 4px rgba(100,80,20,0.08)"; }}}
         >
-          {showRegion && cont && (
+          {cont && (
             <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", marginBottom: "7px", padding: "3px 8px", borderRadius: "4px", background: `${cont.color}10`, border: `1px solid ${cont.color}30`, borderLeft: `3px solid ${cont.color}70` }}>
               <span style={{ fontSize: "12px" }}>{cont.icon}</span>
               <span style={{ fontSize: "10px", fontWeight: "700", color: cont.color, letterSpacing: "1px", textTransform: "uppercase" }}>{cont.name}</span>
@@ -282,6 +401,7 @@ export default function VacationPlanner({ user, onSignOut }) {
           <div style={{ display: "flex", gap: "6px", marginTop: "7px", flexWrap: "wrap", alignItems: "center" }}>
             {card.budget && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(154,109,0,0.1)", color: "#6a4e00", border: "1px solid rgba(154,109,0,0.2)" }}>💰 {card.budget}</span>}
             {card.dates && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(110,58,24,0.08)", color: "#5e3010", border: "1px solid rgba(110,58,24,0.18)" }}>📅 {card.dates}</span>}
+            {hasCoords && <span style={{ fontSize: "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(14,85,101,0.08)", color: "#0e5565", border: "1px solid rgba(14,85,101,0.18)" }}>📍 {card.latitude.toFixed(2)}, {card.longitude.toFixed(2)}</span>}
           </div>
           {card.tags.length > 0 && (
             <div style={{ display: "flex", gap: "4px", marginTop: "5px", flexWrap: "wrap" }}>
@@ -305,18 +425,8 @@ export default function VacationPlanner({ user, onSignOut }) {
     );
   };
 
-  const ToggleSwitch = () => (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-      <span style={{ fontSize: "11px", fontWeight: "600", color: swimlanes ? "#5a4828" : "#3d2a08", letterSpacing: "1px" }}>LIST</span>
-      <div onClick={() => setSwimlanes(p => !p)} style={{ width: "44px", height: "24px", borderRadius: "12px", cursor: "pointer", background: swimlanes ? "linear-gradient(135deg, #8a6508 0%, #6a4e00 100%)" : "rgba(100,80,20,0.2)", border: swimlanes ? "1px solid #6a4e00" : "1px solid rgba(100,80,20,0.25)", position: "relative", transition: "all 0.3s ease", boxShadow: swimlanes ? "inset 0 1px 3px rgba(0,0,0,0.15)" : "inset 0 1px 2px rgba(0,0,0,0.08)" }}>
-        <div style={{ width: "18px", height: "18px", borderRadius: "50%", background: swimlanes ? "#fdfaf0" : "#e8dfc2", border: swimlanes ? "1px solid rgba(154,109,0,0.3)" : "1px solid rgba(100,80,20,0.2)", position: "absolute", top: "2px", left: swimlanes ? "22px" : "2px", transition: "all 0.3s ease", boxShadow: "0 1px 3px rgba(0,0,0,0.15)" }} />
-      </div>
-      <span style={{ fontSize: "11px", fontWeight: "600", color: swimlanes ? "#3d2a08" : "#5a4828", letterSpacing: "1px" }}>REGIONS</span>
-    </div>
-  );
-
-  /* ── Flat Column View ── */
-  const renderFlatView = () => (
+  /* ── Flat Column View (only view now) ── */
+  const renderListView = () => (
     <div style={{ display: "flex", gap: "16px", padding: "20px", overflowX: "auto", minHeight: "calc(100vh - 110px)" }}>
       {COLUMNS.map(col => {
         const colCards = cards.filter(c => c.column === col.id);
@@ -338,71 +448,12 @@ export default function VacationPlanner({ user, onSignOut }) {
               </div>
             </div>
             <div style={{ flex: 1, padding: "8px", display: "flex", flexDirection: "column", gap: "6px", overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
-              {colCards.map(card => renderCard(card, true, col.id, card.continent))}
+              {colCards.map(card => renderCard(card, col.id))}
               {isZoneOver && colCards.length === 0 && <DropIndicator />}
-              <button onClick={() => openAddModal(col.id, "north_america")}
+              <button onClick={() => openAddModal(col.id)}
                 style={{ width: "100%", padding: "8px", background: "transparent", border: "1px dashed rgba(100,80,20,0.18)", borderRadius: "6px", color: "#8a7a58", cursor: "pointer", fontSize: "12px", fontWeight: "600", fontFamily: "'Courier New', monospace", transition: "all 0.3s" }}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(120,90,20,0.4)"; e.currentTarget.style.color = "#4a3a18"; e.currentTarget.style.background = "rgba(154,109,0,0.04)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(100,80,20,0.18)"; e.currentTarget.style.color = "#8a7a58"; e.currentTarget.style.background = "transparent"; }}>+ NEW EXPEDITION</button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
-  /* ── Swimlane Grid View ── */
-  const renderSwimlaneView = () => (
-    <div style={{ position: "relative", zIndex: 5, overflowX: "auto" }}>
-      <div style={{ display: "grid", gridTemplateColumns: "170px repeat(4, minmax(220px, 1fr))", position: "sticky", top: 0, zIndex: 15, background: "rgba(239,228,200,0.97)", backdropFilter: "blur(4px)", borderBottom: "1px solid rgba(100,80,20,0.18)" }}>
-        <div style={{ padding: "10px 14px", borderRight: "1px solid rgba(100,80,20,0.12)", display: "flex", alignItems: "center" }}><ToggleSwitch /></div>
-        {COLUMNS.map(col => (
-          <div key={col.id} style={{ padding: "10px 14px", borderRight: "1px solid rgba(100,80,20,0.08)", textAlign: "center" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-              <span style={{ fontSize: "15px" }}>{col.icon}</span>
-              <span style={{ fontSize: "11px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{col.title}</span>
-            </div>
-            <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#6a5530", letterSpacing: "1px", fontWeight: "500" }}>{col.subtitle}</p>
-          </div>
-        ))}
-      </div>
-      {CONTINENTS.map(cont => {
-        const contCards = cards.filter(c => c.continent === cont.id);
-        const isCollapsed = collapsedRows.has(cont.id);
-        return (
-          <div key={cont.id}>
-            <div style={{ display: "grid", gridTemplateColumns: "170px repeat(4, minmax(220px, 1fr))", borderBottom: "1px solid rgba(100,80,20,0.1)", minHeight: isCollapsed ? "auto" : undefined }}>
-              <div onClick={() => toggleRow(cont.id)} style={{ padding: "12px 14px", cursor: "pointer", borderRight: "1px solid rgba(100,80,20,0.12)", background: `linear-gradient(135deg, ${cont.color}0a 0%, transparent 100%)`, borderLeft: `4px solid ${cont.color}60`, display: "flex", flexDirection: "column", justifyContent: "flex-start", position: "sticky", left: 0, zIndex: 10, transition: "all 0.2s" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <span style={{ fontSize: "22px" }}>{cont.icon}</span>
-                  <div>
-                    <div style={{ fontSize: "12px", fontWeight: "bold", color: cont.color, fontFamily: "'Georgia', serif", letterSpacing: "1px" }}>{cont.name.toUpperCase()}</div>
-                    <div style={{ fontSize: "11px", color: "#5a4828", fontWeight: "500" }}>{contCards.length} expedition{contCards.length !== 1 ? "s" : ""}</div>
-                  </div>
-                  <span style={{ marginLeft: "auto", fontSize: "11px", color: "#5a4828", fontWeight: "bold", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)", transition: "transform 0.2s" }}>▼</span>
-                </div>
-              </div>
-              {!isCollapsed && COLUMNS.map(col => {
-                const cellCards = cards.filter(c => c.continent === cont.id && c.column === col.id);
-                const zoneId = `cell-${cont.id}-${col.id}`;
-                const isZoneOver = dropTarget?.zone === zoneId;
-                return (
-                  <div key={col.id} onDragOver={(e) => handleZoneDragOver(e, zoneId)} onDragLeave={() => setDropTarget(prev => prev?.zone === zoneId ? null : prev)} onDrop={(e) => handleZoneDropCell(e, col.id, cont.id)}
-                    style={{ padding: "8px", borderRight: "1px solid rgba(100,80,20,0.06)", background: isZoneOver ? "rgba(154,109,0,0.07)" : "transparent", transition: "background 0.2s", minHeight: "80px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                    {cellCards.map(card => renderCard(card, false, col.id, cont.id))}
-                    {isZoneOver && cellCards.length === 0 && <DropIndicator />}
-                    <button onClick={() => openAddModal(col.id, cont.id)}
-                      style={{ width: "100%", padding: "6px", marginTop: cellCards.length > 0 ? "2px" : "auto", background: "transparent", border: "1px dashed rgba(100,80,20,0.18)", borderRadius: "6px", color: "#8a7a58", cursor: "pointer", fontSize: "12px", fontWeight: "600", fontFamily: "'Courier New', monospace", transition: "all 0.3s" }}
-                      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(120,90,20,0.4)"; e.currentTarget.style.color = "#4a3a18"; e.currentTarget.style.background = "rgba(154,109,0,0.04)"; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(100,80,20,0.18)"; e.currentTarget.style.color = "#8a7a58"; e.currentTarget.style.background = "transparent"; }}>+</button>
-                  </div>
-                );
-              })}
-              {isCollapsed && (
-                <div style={{ gridColumn: "span 4", padding: "10px 14px", display: "flex", alignItems: "center", color: "#6a5530", fontSize: "12px", fontStyle: "italic" }}>
-                  {contCards.length > 0 ? `${contCards.length} expedition${contCards.length !== 1 ? "s" : ""} — click to expand` : "No expeditions yet — click to expand"}
-                </div>
-              )}
             </div>
           </div>
         );
@@ -448,12 +499,69 @@ export default function VacationPlanner({ user, onSignOut }) {
           <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
             <div style={{ fontSize: "32px", filter: "drop-shadow(0 2px 4px rgba(100,80,20,0.2))", animation: "float 3s ease-in-out infinite" }}>🏺</div>
             <div>
-              <h1 style={{ margin: 0, fontSize: "24px", fontWeight: "bold", fontFamily: "'Georgia', serif", color: "#3d2a08", textShadow: "0 1px 2px rgba(100,80,20,0.1)", letterSpacing: "3px", textTransform: "uppercase" }}>THE ADVENTURE LEDGER</h1>
-              <p style={{ margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530", textTransform: "uppercase", fontWeight: "500" }}>Fortune & Glory Vacation Planner</p>
+              {/* ── Editable Title ── */}
+              {editingTitle ? (
+                <input
+                  ref={titleInputRef}
+                  value={boardTitle}
+                  onChange={(e) => setBoardTitle(e.target.value)}
+                  onBlur={handleTitleBlur}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                  style={{
+                    margin: 0, fontSize: "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    color: "#3d2a08", letterSpacing: "3px", textTransform: "uppercase",
+                    background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
+                    borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
+                    maxWidth: "500px",
+                  }}
+                />
+              ) : (
+                <h1
+                  onClick={() => setEditingTitle(true)}
+                  title="Click to edit"
+                  style={{
+                    margin: 0, fontSize: "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    color: "#3d2a08", textShadow: "0 1px 2px rgba(100,80,20,0.1)", letterSpacing: "3px",
+                    textTransform: "uppercase", cursor: "pointer", borderBottom: "1px dashed transparent",
+                    transition: "border-color 0.2s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = "rgba(100,80,20,0.3)"}
+                  onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = "transparent"}
+                >{boardTitle}</h1>
+              )}
+              {/* ── Editable Subtitle ── */}
+              {editingSubtitle ? (
+                <input
+                  ref={subtitleInputRef}
+                  value={boardSubtitle}
+                  onChange={(e) => setBoardSubtitle(e.target.value)}
+                  onBlur={handleSubtitleBlur}
+                  onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                  style={{
+                    margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
+                    textTransform: "uppercase", fontWeight: "500",
+                    background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
+                    borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
+                    maxWidth: "400px", fontFamily: "'Courier New', monospace",
+                  }}
+                />
+              ) : (
+                <p
+                  onClick={() => setEditingSubtitle(true)}
+                  title="Click to edit"
+                  style={{
+                    margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
+                    textTransform: "uppercase", fontWeight: "500", cursor: "pointer",
+                    borderBottom: "1px dashed transparent", transition: "border-color 0.2s",
+                    display: "inline-block",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = "rgba(100,80,20,0.3)"}
+                  onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = "transparent"}
+                >{boardSubtitle}</p>
+              )}
             </div>
           </div>
           <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
-            {!swimlanes && <ToggleSwitch />}
             <SaveIndicator />
             {[
               { label: "Dreaming", val: stats.dreams, color: "#8a6508" },
@@ -489,7 +597,7 @@ export default function VacationPlanner({ user, onSignOut }) {
         </div>
       </header>
 
-      {swimlanes ? renderSwimlaneView() : renderFlatView()}
+      {renderListView()}
 
       {showModal && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(60,48,20,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.2s ease" }} onClick={() => setShowModal(false)}>
@@ -513,6 +621,79 @@ export default function VacationPlanner({ user, onSignOut }) {
                 )}
               </div>
             ))}
+
+            {/* ── Location / Coordinates ── */}
+            <div style={{ marginBottom: "14px" }}>
+              <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#4a3a18", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "5px" }}>📍 Location Coordinates</label>
+              <div style={{ position: "relative", marginBottom: "8px" }}>
+                <input
+                  value={locationQuery}
+                  onChange={(e) => handleLocationSearch(e.target.value)}
+                  placeholder="Search a place (e.g. Paris, Machu Picchu)..."
+                  style={{ width: "100%", padding: "10px", paddingLeft: "32px", background: "rgba(255,253,245,0.8)", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "6px", color: "#2e2410", fontFamily: "'Courier New', monospace", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+                />
+                <span style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", pointerEvents: "none" }}>🔍</span>
+                {locationResults.length > 0 && (
+                  <div style={{
+                    position: "absolute", top: "100%", left: 0, right: 0, zIndex: 10,
+                    background: "#fdfaf0", border: "1px solid rgba(100,80,20,0.2)",
+                    borderRadius: "0 0 6px 6px", boxShadow: "0 8px 24px rgba(60,48,20,0.15)",
+                    maxHeight: "200px", overflowY: "auto",
+                  }}>
+                    {locationResults.map((loc, i) => (
+                      <div
+                        key={i}
+                        onClick={() => selectLocation(loc)}
+                        style={{
+                          padding: "8px 12px", cursor: "pointer", fontSize: "13px",
+                          color: "#2e2410", borderBottom: "1px solid rgba(100,80,20,0.08)",
+                          transition: "background 0.15s", fontFamily: "'Courier New', monospace",
+                          display: "flex", justifyContent: "space-between", alignItems: "center",
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = "rgba(154,109,0,0.08)"}
+                        onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span>{loc.name}</span>
+                        <span style={{ fontSize: "10px", color: "#8a7a58" }}>{loc.lat.toFixed(2)}, {loc.lng.toFixed(2)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: "10px", fontWeight: "600", color: "#5a4828", letterSpacing: "1px", marginBottom: "3px" }}>LATITUDE</label>
+                  <input
+                    type="number" step="any"
+                    value={formData.latitude}
+                    onChange={(e) => setFormData(p => ({ ...p, latitude: e.target.value }))}
+                    placeholder="-90 to 90"
+                    style={{ width: "100%", padding: "8px", background: "rgba(255,253,245,0.8)", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "6px", color: "#2e2410", fontFamily: "'Courier New', monospace", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: "block", fontSize: "10px", fontWeight: "600", color: "#5a4828", letterSpacing: "1px", marginBottom: "3px" }}>LONGITUDE</label>
+                  <input
+                    type="number" step="any"
+                    value={formData.longitude}
+                    onChange={(e) => setFormData(p => ({ ...p, longitude: e.target.value }))}
+                    placeholder="-180 to 180"
+                    style={{ width: "100%", padding: "8px", background: "rgba(255,253,245,0.8)", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "6px", color: "#2e2410", fontFamily: "'Courier New', monospace", fontSize: "13px", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+              </div>
+              {formData.latitude !== "" && formData.longitude !== "" && (
+                <div style={{ marginTop: "6px", padding: "6px 10px", borderRadius: "4px", background: "rgba(14,85,101,0.06)", border: "1px solid rgba(14,85,101,0.15)", fontSize: "11px", color: "#0e5565", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <span>📍</span>
+                  <span>{parseFloat(formData.latitude).toFixed(4)}, {parseFloat(formData.longitude).toFixed(4)}</span>
+                  <button
+                    onClick={() => { setFormData(p => ({ ...p, latitude: "", longitude: "" })); setLocationQuery(""); }}
+                    style={{ marginLeft: "auto", background: "none", border: "none", color: "#8a1a1a", cursor: "pointer", fontSize: "11px", fontWeight: "600", fontFamily: "'Courier New', monospace" }}
+                  >✕ Clear</button>
+                </div>
+              )}
+            </div>
+
             <div style={{ marginBottom: "14px" }}>
               <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#4a3a18", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "6px" }}>Region</label>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(125px, 1fr))", gap: "6px" }}>

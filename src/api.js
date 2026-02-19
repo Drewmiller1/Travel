@@ -17,6 +17,47 @@ async function getUserId() {
   return data?.session?.user?.id ?? null;
 }
 
+/* ── User Settings (board title / subtitle) ── */
+
+export async function fetchUserSettings() {
+  const { data, error } = await supabase
+    .from("user_settings")
+    .select("*")
+    .single();
+
+  if (error && error.code === "PGRST116") {
+    // No row found — create default
+    const userId = await getUserId();
+    if (!userId) return { board_title: "THE ADVENTURE LEDGER", board_subtitle: "Fortune & Glory Vacation Planner" };
+    const { data: created, error: insertErr } = await supabase
+      .from("user_settings")
+      .insert({ user_id: userId })
+      .select()
+      .single();
+    if (insertErr) throw insertErr;
+    return created;
+  }
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserSettings(updates) {
+  const userId = await getUserId();
+  if (!userId) throw new Error("Not logged in");
+
+  const { data, error } = await supabase
+    .from("user_settings")
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+/* ── Expeditions CRUD ── */
+
 export async function fetchExpeditions() {
   const { data, error } = await supabase
     .from("expeditions")
@@ -102,6 +143,8 @@ function rowToCard(row) {
     tags: row.tags || [],
     rating: row.rating,
     sort_order: row.sort_order ?? 0,
+    latitude: row.latitude ?? null,
+    longitude: row.longitude ?? null,
   };
 }
 
@@ -118,6 +161,8 @@ function cardToRow(card, userId) {
     tags: card.tags || [],
     rating: card.rating || null,
     sort_order: card.sort_order ?? 0,
+    latitude: card.latitude ?? null,
+    longitude: card.longitude ?? null,
   };
   if (userId) row.user_id = userId;
   return row;
