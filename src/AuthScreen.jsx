@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { signIn, signUp } from "./auth";
 
-export default function AuthScreen({ onAuth }) {
+export default function AuthScreen({ onAuth, onDemoMode }) {
   const [mode, setMode] = useState("login"); // login | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -200,6 +200,32 @@ export default function AuthScreen({ onAuth }) {
               {loading ? "⟳ LOADING..." : mode === "login" ? "⚡ ENTER THE VAULT" : "⚡ JOIN THE EXPEDITION"}
             </button>
           </form>
+
+          {/* Demo mode divider and button */}
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", margin: "20px 0 16px" }}>
+            <div style={{ flex: 1, height: "1px", background: "rgba(100,80,20,0.15)" }} />
+            <span style={{ fontSize: "10px", letterSpacing: "2px", color: "#8a7a58", textTransform: "uppercase", fontWeight: "600" }}>or</span>
+            <div style={{ flex: 1, height: "1px", background: "rgba(100,80,20,0.15)" }} />
+          </div>
+          <button
+            type="button"
+            onClick={onDemoMode}
+            style={{
+              width: "100%", padding: "12px", fontSize: "12px", fontWeight: "bold",
+              background: "transparent",
+              border: "1px dashed rgba(100,80,20,0.3)",
+              borderRadius: "6px", color: "#6a5530", cursor: "pointer",
+              letterSpacing: "1.5px", textTransform: "uppercase",
+              fontFamily: "'Courier New', monospace", transition: "all 0.2s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(154,109,0,0.06)"; e.currentTarget.style.borderColor = "rgba(100,80,20,0.5)"; e.currentTarget.style.color = "#3d2a08"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "rgba(100,80,20,0.3)"; e.currentTarget.style.color = "#6a5530"; }}
+          >
+            🧭 EXPLORE DEMO — NO ACCOUNT NEEDED
+          </button>
+          <p style={{ textAlign: "center", margin: "8px 0 0", fontSize: "10px", color: "#8a7a58", letterSpacing: "0.5px" }}>
+            Try the app with sample data. Nothing is saved.
+          </p>
         </div>
       </div>
 

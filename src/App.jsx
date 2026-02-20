@@ -6,6 +6,7 @@ import VacationPlanner from "./VacationPlanner";
 export default function App() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [demoMode, setDemoMode] = useState(false);
 
   useEffect(() => {
     // Check for existing session on mount
@@ -31,7 +32,7 @@ export default function App() {
         fontFamily: "'Georgia', serif",
       }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: "48px", animation: "float 2s ease-in-out infinite", marginBottom: "16px" }}>ðŸº</div>
+          <div style={{ fontSize: "48px", animation: "float 2s ease-in-out infinite", marginBottom: "16px" }}>{"\uD83C\uDFFA"}</div>
           <div style={{ fontSize: "14px", color: "#7a5c1a", letterSpacing: "3px", textTransform: "uppercase" }}>
             Checking credentials...
           </div>
@@ -41,8 +42,18 @@ export default function App() {
     );
   }
 
+  if (demoMode) {
+    return (
+      <VacationPlanner
+        user={{ email: "Demo Explorer" }}
+        demoMode={true}
+        onSignOut={() => setDemoMode(false)}
+      />
+    );
+  }
+
   if (!user) {
-    return <AuthScreen onAuth={(u) => setUser(u)} />;
+    return <AuthScreen onAuth={(u) => setUser(u)} onDemoMode={() => setDemoMode(true)} />;
   }
 
   return (
