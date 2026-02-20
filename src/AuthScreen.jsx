@@ -81,14 +81,14 @@ export default function AuthScreen({ onAuth }) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(175deg, #f5eed6 0%, #efe4c8 30%, #f0e8d0 60%, #e8dfc2 100%)", fontFamily: "'Courier New', monospace" }}>
         <div style={{ textAlign: "center", maxWidth: "400px", padding: "40px 32px", background: "linear-gradient(135deg, #fdfaf0 0%, #f2ebd4 100%)", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "12px", boxShadow: "0 16px 48px rgba(60,48,20,0.15)" }}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>ðŸ“¬</div>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📬</div>
           <h2 style={{ fontSize: "20px", fontFamily: "'Georgia', serif", color: "#3d2a08", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "12px" }}>CHECK YOUR EMAIL</h2>
           <p style={{ fontSize: "13px", color: "#5a4828", lineHeight: 1.6, marginBottom: "20px" }}>
             We sent a confirmation link to <strong>{email}</strong>. Click the link to activate your account, then come back here to sign in.
           </p>
           <button onClick={() => { setSignupSuccess(false); setMode("login"); setPassword(""); setConfirmPassword(""); }}
             style={{ padding: "11px 28px", fontSize: "12px", fontWeight: "bold", background: "linear-gradient(135deg, rgba(154,109,0,0.18) 0%, rgba(120,85,10,0.18) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "6px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace" }}>
-            âš¡ BACK TO LOGIN
+            ⚡ BACK TO LOGIN
           </button>
         </div>
       </div>
@@ -103,7 +103,7 @@ export default function AuthScreen({ onAuth }) {
     }}>
       {/* Background decorations */}
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: `radial-gradient(ellipse at 20% 50%, rgba(184,134,11,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(160,82,45,0.05) 0%, transparent 40%)` }} />
-      <div style={{ position: "fixed", bottom: "-80px", right: "-80px", width: "300px", height: "300px", opacity: 0.05, fontSize: "300px", pointerEvents: "none" }}>ðŸ§­</div>
+      <div style={{ position: "fixed", bottom: "-80px", right: "-80px", width: "300px", height: "300px", opacity: 0.05, fontSize: "300px", pointerEvents: "none" }}>🧭</div>
 
       <div style={{
         position: "relative", zIndex: 10, width: "100%", maxWidth: "420px", padding: "20px",
@@ -117,7 +117,7 @@ export default function AuthScreen({ onAuth }) {
         }}>
           {/* Logo */}
           <div style={{ textAlign: "center", marginBottom: "28px" }}>
-            <div style={{ fontSize: "40px", marginBottom: "8px", animation: "float 3s ease-in-out infinite" }}>ðŸº</div>
+            <div style={{ fontSize: "40px", marginBottom: "8px", animation: "float 3s ease-in-out infinite" }}>🏺</div>
             <h1 style={{ margin: 0, fontSize: "22px", fontWeight: "bold", fontFamily: "'Georgia', serif", color: "#3d2a08", letterSpacing: "3px", textTransform: "uppercase" }}>
               ADVENTURE LEDGER
             </h1>
@@ -138,7 +138,7 @@ export default function AuthScreen({ onAuth }) {
                   background: mode === m ? "rgba(154,109,0,0.15)" : "transparent",
                   color: mode === m ? "#3d2a08" : "#8a7a58",
                 }}>
-                {m === "login" ? "ðŸ—ï¸ Sign In" : "ðŸ“œ Sign Up"}
+                {m === "login" ? "🗝️ Sign In" : "📜 Sign Up"}
               </button>
             ))}
           </div>
@@ -183,7 +183,7 @@ export default function AuthScreen({ onAuth }) {
                 padding: "10px 14px", marginBottom: "16px", borderRadius: "6px",
                 background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)",
                 color: "#8a1a1a", fontSize: "12px", lineHeight: 1.5,
-              }}>âš ï¸ {error}</div>
+              }}>⚠️ {error}</div>
             )}
 
             <button type="submit" disabled={loading}
@@ -197,7 +197,7 @@ export default function AuthScreen({ onAuth }) {
                 letterSpacing: "1.5px", textTransform: "uppercase",
                 fontFamily: "'Courier New', monospace", transition: "all 0.2s",
               }}>
-              {loading ? "âŸ³ LOADING..." : mode === "login" ? "âš¡ ENTER THE VAULT" : "âš¡ JOIN THE EXPEDITION"}
+              {loading ? "⟳ LOADING..." : mode === "login" ? "⚡ ENTER THE VAULT" : "⚡ JOIN THE EXPEDITION"}
             </button>
           </form>
         </div>
