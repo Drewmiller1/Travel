@@ -98,7 +98,19 @@ const LOCATION_PRESETS = [
   { name: "Yellowstone, USA", lat: 44.4280, lng: -110.5885 },
 ];
 
-export default function VacationPlanner({ user, onSignOut }) {
+/* ── Demo sample data (mirrors the DB seed for real users) ── */
+const DEMO_CARDS = [
+  { id: "demo-1", column: "dreams", continent: "asia", title: "Petra, Jordan", description: "Explore the ancient rose-red city carved into sandstone cliffs. Walk through the Siq canyon to discover the Treasury and countless tombs.", image: "🗺️", budget: "$2,500", dates: "Oct 2026", tags: ["adventure", "historical", "ruins"], rating: null, sort_order: 0, latitude: 30.3285, longitude: 35.4444 },
+  { id: "demo-2", column: "dreams", continent: "south_america", title: "Machu Picchu, Peru", description: "Trek the Inca Trail to the legendary lost city in the clouds. Experience breathtaking mountain vistas and ancient engineering.", image: "🗺️", budget: "$3,200", dates: "Jul 2026", tags: ["trek", "ruins", "adventure"], rating: null, sort_order: 1, latitude: -13.1631, longitude: -72.5450 },
+  { id: "demo-3", column: "planning", continent: "europe", title: "Iceland Ring Road", description: "Drive the famous Route 1 around the entire island. Witness waterfalls, glaciers, volcanic landscapes, and the northern lights.", image: "🗺️", budget: "$4,000", dates: "Feb 2027", tags: ["road trip", "nature", "adventure"], rating: null, sort_order: 2, latitude: 64.1466, longitude: -21.9426 },
+  { id: "demo-4", column: "completed", continent: "europe", title: "Rome, Italy", description: "Wandered through millennia of history — the Colosseum, Vatican, Pantheon, and endless gelato. La dolce vita at its finest.", image: "🗺️", budget: "$2,800", dates: "May 2025", tags: ["historical", "food", "culture"], rating: 5, sort_order: 3, latitude: 41.9028, longitude: 12.4964 },
+  { id: "demo-5", column: "completed", continent: "asia", title: "Kyoto, Japan", description: "Discovered serene temples, bamboo groves, and the art of tea ceremony. A perfect blend of tradition and tranquility.", image: "🗺️", budget: "$3,500", dates: "Apr 2025", tags: ["culture", "zen", "food"], rating: 4, sort_order: 4, latitude: 35.0116, longitude: 135.7681 },
+  { id: "demo-6", column: "dreams", continent: "africa", title: "Serengeti Safari, Tanzania", description: "Witness the great migration — millions of wildebeest and zebra crossing the vast plains, alongside lions, elephants, and cheetahs.", image: "🗺️", budget: "$5,000", dates: "Aug 2026", tags: ["wildlife", "nature", "adventure"], rating: null, sort_order: 5, latitude: -2.3333, longitude: 34.8333 },
+  { id: "demo-7", column: "dreams", continent: "oceania", title: "Great Barrier Reef, Australia", description: "Dive into the world's largest coral reef system. Snorkel with sea turtles, manta rays, and thousands of species of tropical fish.", image: "🗺️", budget: "$3,800", dates: "Nov 2026", tags: ["beach", "nature", "adventure"], rating: null, sort_order: 6, latitude: -18.2871, longitude: 147.6992 },
+  { id: "demo-8", column: "planning", continent: "north_america", title: "Grand Canyon, USA", description: "Hike rim-to-rim through one of the natural wonders of the world. Layers of red rock reveal millions of years of geological history.", image: "🗺️", budget: "$1,500", dates: "Mar 2026", tags: ["trek", "nature"], rating: null, sort_order: 7, latitude: 36.1069, longitude: -112.1129 },
+];
+
+export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -125,8 +137,13 @@ export default function VacationPlanner({ user, onSignOut }) {
   const [locationQuery, setLocationQuery] = useState("");
   const [locationResults, setLocationResults] = useState([]);
 
-  /* ── Load from Supabase on mount ── */
+  /* ── Load from Supabase on mount (or demo data) ── */
   useEffect(() => {
+    if (demoMode) {
+      setCards(DEMO_CARDS.map(c => ({ ...c })));
+      setLoading(false);
+      return;
+    }
     (async () => {
       try {
         const [data, settings] = await Promise.all([
@@ -143,7 +160,7 @@ export default function VacationPlanner({ user, onSignOut }) {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [demoMode]);
 
   /* ── Focus input when editing title/subtitle ── */
   useEffect(() => {
@@ -155,6 +172,7 @@ export default function VacationPlanner({ user, onSignOut }) {
 
   /* ── Debounced save for title/subtitle ── */
   const saveBoardSettings = useCallback((title, subtitle) => {
+    if (demoMode) return; // Demo mode: edits work locally but don't persist
     if (titleSaveTimeout.current) clearTimeout(titleSaveTimeout.current);
     setSaveStatus("saving");
     titleSaveTimeout.current = setTimeout(async () => {
@@ -166,7 +184,7 @@ export default function VacationPlanner({ user, onSignOut }) {
         setSaveStatus("error");
       }
     }, 800);
-  }, []);
+  }, [demoMode]);
 
   const handleTitleBlur = () => {
     setEditingTitle(false);
@@ -184,6 +202,7 @@ export default function VacationPlanner({ user, onSignOut }) {
 
   /* ── Debounced bulk reorder save ── */
   const saveReorder = useCallback((updatedCards) => {
+    if (demoMode) return; // Demo mode: reorder works locally but doesn't persist
     if (reorderTimeoutRef.current) clearTimeout(reorderTimeoutRef.current);
     setSaveStatus("saving");
     reorderTimeoutRef.current = setTimeout(async () => {
@@ -198,7 +217,7 @@ export default function VacationPlanner({ user, onSignOut }) {
         setSaveStatus("error");
       }
     }, 800);
-  }, []);
+  }, [demoMode]);
 
   const openAddModal = (columnId) => {
     setEditCard(null);
@@ -247,6 +266,27 @@ export default function VacationPlanner({ user, onSignOut }) {
     const tagArray = formData.tags.split(",").map(t => t.trim().toLowerCase()).filter(Boolean);
     const lat = formData.latitude === "" ? null : parseFloat(formData.latitude);
     const lng = formData.longitude === "" ? null : parseFloat(formData.longitude);
+
+    if (demoMode) {
+      // Demo mode: all changes are in-memory only
+      if (editCard) {
+        setCards(prev => prev.map(c => c.id === editCard.id ? { ...c, ...formData, tags: tagArray, latitude: lat, longitude: lng } : c));
+      } else {
+        const newId = `demo-${Date.now()}`;
+        const newCard = {
+          id: newId, column: formData.column, continent: formData.continent,
+          title: formData.title, description: formData.description, image: "🗺️",
+          budget: formData.budget, dates: formData.dates, tags: tagArray, rating: formData.rating,
+          sort_order: cards.length, latitude: lat, longitude: lng,
+        };
+        setAnimatingCards(prev => new Set([...prev, newId]));
+        setCards(prev => [...prev, newCard]);
+        setTimeout(() => setAnimatingCards(prev => { const n = new Set(prev); n.delete(newId); return n; }), 500);
+      }
+      setShowModal(false);
+      return;
+    }
+
     setSaveStatus("saving");
 
     try {
@@ -280,6 +320,7 @@ export default function VacationPlanner({ user, onSignOut }) {
   const handleDelete = async (id) => {
     setCards(prev => prev.filter(c => c.id !== id));
     setExpandedCard(null);
+    if (demoMode) return; // Demo mode: delete locally only
     setSaveStatus("saving");
     try {
       await deleteExpedition(id);
@@ -581,7 +622,7 @@ export default function VacationPlanner({ user, onSignOut }) {
             </div>
           </div>
           <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
-            <SaveIndicator />
+            {!demoMode && <SaveIndicator />}
             {[
               { label: "Dreaming", val: stats.dreams, color: "#8a6508" },
               { label: "Planning", val: stats.planning, color: "#6a5010" },
@@ -593,28 +634,65 @@ export default function VacationPlanner({ user, onSignOut }) {
                 <div style={{ fontSize: "10px", fontWeight: "600", letterSpacing: "1.5px", color: "#5a4828", textTransform: "uppercase" }}>{s.label}</div>
               </div>
             ))}
-            {/* User & Sign Out */}
+            {/* User & Sign Out / Demo exit */}
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "4px", paddingLeft: "16px", borderLeft: "1px solid rgba(100,80,20,0.15)" }}>
               <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "11px", fontWeight: "600", color: "#3d2a08", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email || "Explorer"}</div>
-                <div style={{ fontSize: "9px", color: "#8a7a58", letterSpacing: "1px", textTransform: "uppercase" }}>ADVENTURER</div>
+                <div style={{ fontSize: "11px", fontWeight: "600", color: "#3d2a08", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{demoMode ? "Demo Explorer" : (user?.email || "Explorer")}</div>
+                <div style={{ fontSize: "9px", color: "#8a7a58", letterSpacing: "1px", textTransform: "uppercase" }}>{demoMode ? "DEMO MODE" : "ADVENTURER"}</div>
               </div>
-              <button onClick={async () => { await signOut(); onSignOut?.(); }}
-                style={{
-                  padding: "6px 12px", fontSize: "10px", fontWeight: "700",
-                  background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)",
-                  borderRadius: "5px", color: "#8a1a1a", cursor: "pointer",
-                  letterSpacing: "1px", textTransform: "uppercase",
-                  fontFamily: "'Courier New', monospace", transition: "all 0.2s",
-                  whiteSpace: "nowrap",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.12)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.35)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.06)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.2)"; }}
-              >🚪 Sign Out</button>
+              {demoMode ? (
+                <button onClick={() => onSignOut?.()}
+                  style={{
+                    padding: "6px 12px", fontSize: "10px", fontWeight: "700",
+                    background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)",
+                    border: "2px solid rgba(154,109,0,0.35)",
+                    borderRadius: "5px", color: "#3d2a08", cursor: "pointer",
+                    letterSpacing: "1px", textTransform: "uppercase",
+                    fontFamily: "'Courier New', monospace", transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.25) 0%, rgba(120,85,10,0.25) 100%)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)"; }}
+                >📜 Sign Up</button>
+              ) : (
+                <button onClick={async () => { await signOut(); onSignOut?.(); }}
+                  style={{
+                    padding: "6px 12px", fontSize: "10px", fontWeight: "700",
+                    background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)",
+                    borderRadius: "5px", color: "#8a1a1a", cursor: "pointer",
+                    letterSpacing: "1px", textTransform: "uppercase",
+                    fontFamily: "'Courier New', monospace", transition: "all 0.2s",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.12)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.35)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.06)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.2)"; }}
+                >🚪 Sign Out</button>
+              )}
             </div>
           </div>
         </div>
       </header>
+
+      {demoMode && (
+        <div style={{
+          padding: "8px 28px", background: "linear-gradient(90deg, rgba(154,109,0,0.12) 0%, rgba(120,85,10,0.08) 100%)",
+          borderBottom: "1px solid rgba(154,109,0,0.2)",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
+          fontSize: "12px", color: "#5a4000", fontWeight: "600", letterSpacing: "0.5px",
+        }}>
+          <span>🧭</span>
+          <span>You're exploring in demo mode — changes are temporary and won't be saved.</span>
+          <button onClick={() => onSignOut?.()}
+            style={{
+              padding: "4px 12px", fontSize: "10px", fontWeight: "700",
+              background: "rgba(154,109,0,0.12)", border: "1px solid rgba(154,109,0,0.3)",
+              borderRadius: "4px", color: "#3d2a08", cursor: "pointer",
+              letterSpacing: "1px", textTransform: "uppercase",
+              fontFamily: "'Courier New', monospace",
+            }}
+          >Create Account</button>
+        </div>
+      )}
 
       {renderListView()}
 
