@@ -432,7 +432,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
       <div style={{
         display: "flex", alignItems: "center", gap: "5px", padding: "3px 10px",
         borderRadius: "4px", background: s.bg, border: `1px solid ${s.border}`,
-        fontSize: isMobile ? "12px" : "10px", fontWeight: "600", color: s.color, letterSpacing: "0.5px",
+        fontSize: isMobile ? "13px" : "10px", fontWeight: "600", color: s.color, letterSpacing: "0.5px",
         transition: "all 0.3s",
       }}>{s.text}</div>
     );
@@ -462,26 +462,26 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
         >
           {cont && (
             <div style={{ display: "inline-flex", alignItems: "center", gap: "5px", marginBottom: "7px", padding: "3px 8px", borderRadius: "4px", background: `${cont.color}10`, border: `1px solid ${cont.color}30`, borderLeft: `3px solid ${cont.color}70` }}>
-              <span style={{ fontSize: isMobile ? "14px" : "12px" }}>{cont.icon}</span>
-              <span style={{ fontSize: isMobile ? "12px" : "10px", fontWeight: "700", color: cont.color, letterSpacing: "1px", textTransform: "uppercase" }}>{cont.name}</span>
+              <span style={{ fontSize: isMobile ? "15px" : "12px" }}>{cont.icon}</span>
+              <span style={{ fontSize: isMobile ? "13px" : "10px", fontWeight: "700", color: cont.color, letterSpacing: "1px", textTransform: "uppercase" }}>{cont.name}</span>
             </div>
           )}
           <div style={{ display: "flex", alignItems: "flex-start", gap: "9px" }}>
             <span style={{ fontSize: "22px", lineHeight: 1 }}>{card.image}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h3 style={{ margin: 0, fontSize: isMobile ? "16px" : "14px", color: "#2e2410", fontFamily: "'Georgia', serif", fontWeight: "bold", lineHeight: 1.3 }}>{card.title}</h3>
-              <p style={{ margin: "4px 0 0", fontSize: isMobile ? "14px" : "12px", color: "#4a3d28", lineHeight: 1.5, display: expandedCard?.id === card.id ? "block" : "-webkit-box", WebkitLineClamp: expandedCard?.id === card.id ? "unset" : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{card.description}</p>
+              <h3 style={{ margin: 0, fontSize: isMobile ? "18px" : "14px", color: "#2e2410", fontFamily: "'Georgia', serif", fontWeight: "bold", lineHeight: 1.3 }}>{card.title}</h3>
+              <p style={{ margin: "4px 0 0", fontSize: isMobile ? "15px" : "12px", color: "#4a3d28", lineHeight: 1.5, display: expandedCard?.id === card.id ? "block" : "-webkit-box", WebkitLineClamp: expandedCard?.id === card.id ? "unset" : 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{card.description}</p>
             </div>
           </div>
           <div style={{ display: "flex", gap: "6px", marginTop: "7px", flexWrap: "wrap", alignItems: "center" }}>
-            {card.budget && <span style={{ fontSize: isMobile ? "13px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(154,109,0,0.1)", color: "#6a4e00", border: "1px solid rgba(154,109,0,0.2)" }}>💰 {card.budget}</span>}
-            {card.dates && <span style={{ fontSize: isMobile ? "13px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(110,58,24,0.08)", color: "#5e3010", border: "1px solid rgba(110,58,24,0.18)" }}>📅 {card.dates}</span>}
-            {hasCoords && <span style={{ fontSize: isMobile ? "13px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(14,85,101,0.08)", color: "#0e5565", border: "1px solid rgba(14,85,101,0.18)" }}>📍 {card.latitude.toFixed(2)}, {card.longitude.toFixed(2)}</span>}
+            {card.budget && <span style={{ fontSize: isMobile ? "14px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(154,109,0,0.1)", color: "#6a4e00", border: "1px solid rgba(154,109,0,0.2)" }}>💰 {card.budget}</span>}
+            {card.dates && <span style={{ fontSize: isMobile ? "14px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(110,58,24,0.08)", color: "#5e3010", border: "1px solid rgba(110,58,24,0.18)" }}>📅 {card.dates}</span>}
+            {hasCoords && <span style={{ fontSize: isMobile ? "14px" : "11px", fontWeight: "600", padding: "2px 7px", borderRadius: "4px", background: "rgba(14,85,101,0.08)", color: "#0e5565", border: "1px solid rgba(14,85,101,0.18)" }}>📍 {card.latitude.toFixed(2)}, {card.longitude.toFixed(2)}</span>}
           </div>
           {card.tags.length > 0 && (
             <div style={{ display: "flex", gap: "4px", marginTop: "5px", flexWrap: "wrap" }}>
               {card.tags.map(tag => (
-                <span key={tag} style={{ fontSize: isMobile ? "12px" : "10px", fontWeight: "700", padding: "2px 6px", borderRadius: "3px", background: `${getTagColor(tag)}14`, color: getTagColor(tag), border: `1px solid ${getTagColor(tag)}35`, letterSpacing: "0.5px", textTransform: "uppercase" }}>{tag}</span>
+                <span key={tag} style={{ fontSize: isMobile ? "13px" : "10px", fontWeight: "700", padding: "2px 6px", borderRadius: "3px", background: `${getTagColor(tag)}14`, color: getTagColor(tag), border: `1px solid ${getTagColor(tag)}35`, letterSpacing: "0.5px", textTransform: "uppercase" }}>{tag}</span>
               ))}
             </div>
           )}
@@ -515,8 +515,8 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
           <div style={{ padding: "12px 16px 24px" }}>
             {activeCol && (
               <div style={{ padding: "10px 0 8px", marginBottom: "4px" }}>
-                <h2 style={{ margin: 0, fontSize: "16px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{activeCol.title}</h2>
-                <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#6a5530", fontWeight: "500", letterSpacing: "1px" }}>{activeCol.subtitle}</p>
+                <h2 style={{ margin: 0, fontSize: "18px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{activeCol.title}</h2>
+                <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#6a5530", fontWeight: "500", letterSpacing: "1px" }}>{activeCol.subtitle}</p>
               </div>
             )}
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
@@ -614,7 +614,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
                   onBlur={handleTitleBlur}
                   onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
                   style={{
-                    margin: 0, fontSize: isMobile ? "18px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    margin: 0, fontSize: isMobile ? "20px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
                     color: "#3d2a08", letterSpacing: isMobile ? "1px" : "3px", textTransform: "uppercase",
                     background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
                     borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
@@ -626,7 +626,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
                   onClick={() => setEditingTitle(true)}
                   title="Click to edit"
                   style={{
-                    margin: 0, fontSize: isMobile ? "18px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    margin: 0, fontSize: isMobile ? "20px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
                     color: "#3d2a08", textShadow: "0 1px 2px rgba(100,80,20,0.1)", letterSpacing: isMobile ? "1px" : "3px",
                     textTransform: "uppercase", cursor: "pointer", borderBottom: "1px dashed transparent",
                     transition: "border-color 0.2s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
@@ -673,7 +673,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
               {!demoMode && <SaveIndicator />}
               {demoMode ? (
                 <button onClick={() => onSignOut?.()}
-                  style={{ padding: "8px 12px", fontSize: "13px", fontWeight: "700", background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "5px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", whiteSpace: "nowrap", minHeight: "44px" }}>
+                  style={{ padding: "8px 12px", fontSize: "14px", fontWeight: "700", background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "5px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", whiteSpace: "nowrap", minHeight: "44px" }}>
                   📜 Sign Up</button>
               ) : (
                 <button onClick={async () => { await signOut(); onSignOut?.(); }}
@@ -730,8 +730,8 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
                     background: "transparent", border: "none", borderBottom: isActive ? "2px solid #8a6508" : "2px solid transparent",
                     cursor: "pointer", transition: "all 0.2s", opacity: isActive ? 1 : 0.5,
                   }}>
-                  <span style={{ fontSize: "18px", lineHeight: 1 }}>{col.icon}</span>
-                  <span style={{ fontSize: "10px", fontWeight: "700", letterSpacing: "0.5px", color: isActive ? "#3d2a08" : "#6a5530", textTransform: "uppercase", fontFamily: "'Courier New', monospace", lineHeight: 1.2 }}>
+                  <span style={{ fontSize: "20px", lineHeight: 1 }}>{col.icon}</span>
+                  <span style={{ fontSize: "11px", fontWeight: "700", letterSpacing: "0.5px", color: isActive ? "#3d2a08" : "#6a5530", textTransform: "uppercase", fontFamily: "'Courier New', monospace", lineHeight: 1.2 }}>
                     {col.id === "dreams" ? "Dreams" : col.id === "planning" ? "Plan" : col.id === "booked" ? "Booked" : "Done"} ({count})
                   </span>
                 </button>
@@ -746,7 +746,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
           padding: isMobile ? "8px 16px" : "8px 28px", background: "linear-gradient(90deg, rgba(154,109,0,0.12) 0%, rgba(120,85,10,0.08) 100%)",
           borderBottom: "1px solid rgba(154,109,0,0.2)",
           display: "flex", alignItems: "center", justifyContent: "center", gap: isMobile ? "6px" : "10px",
-          fontSize: isMobile ? "13px" : "12px", color: "#5a4000", fontWeight: "600", letterSpacing: "0.5px",
+          fontSize: isMobile ? "14px" : "12px", color: "#5a4000", fontWeight: "600", letterSpacing: "0.5px",
           flexWrap: "wrap",
         }}>
           <span>🧭</span>
