@@ -10,6 +10,19 @@ import {
 } from "./api";
 import { signOut } from "./auth";
 
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' && window.innerWidth <= breakpoint
+  );
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e) => setIsMobile(e.matches);
+    mql.addEventListener('change', handler);
+    return () => mql.removeEventListener('change', handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 const COLUMNS = [
   { id: "dreams", title: "DREAM DESTINATIONS", icon: "🗺️", subtitle: "Uncharted Territory" },
   { id: "planning", title: "EXPEDITION PLANNING", icon: "📜", subtitle: "Mapping the Route" },
@@ -121,6 +134,8 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
   const [editCard, setEditCard] = useState(null);
   const [expandedCard, setExpandedCard] = useState(null);
   const [formData, setFormData] = useState({ title: "", description: "", budget: "", dates: "", tags: "", column: "dreams", continent: "north_america", rating: null, latitude: "", longitude: "" });
+  const isMobile = useIsMobile();
+  const [activeTab, setActiveTab] = useState("dreams");
   const [animatingCards, setAnimatingCards] = useState(new Set());
   const reorderTimeoutRef = useRef(null);
 
@@ -471,12 +486,12 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
             </div>
           )}
           {card.column === "completed" && card.rating && <div style={{ marginTop: "5px" }}>{renderStars(card.rating)}</div>}
-          {expandedCard?.id === card.id && (
+          {(expandedCard?.id === card.id || isMobile) && (
             <div style={{ display: "flex", gap: "6px", marginTop: "9px", paddingTop: "9px", borderTop: "1px solid rgba(120,90,20,0.12)" }}>
               <button onClick={(e) => { e.stopPropagation(); openEditModal(card); }}
-                style={{ flex: 1, padding: "6px", fontSize: "11px", fontWeight: "600", background: "rgba(154,109,0,0.1)", border: "1px solid rgba(154,109,0,0.25)", borderRadius: "5px", color: "#5a4000", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace" }}>✏️ Edit</button>
+                style={{ flex: 1, padding: isMobile ? "10px" : "6px", fontSize: isMobile ? "13px" : "11px", fontWeight: "600", background: "rgba(154,109,0,0.1)", border: "1px solid rgba(154,109,0,0.25)", borderRadius: "5px", color: "#5a4000", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", minHeight: isMobile ? "44px" : "auto" }}>✏️ Edit</button>
               <button onClick={(e) => { e.stopPropagation(); handleDelete(card.id); }}
-                style={{ flex: 1, padding: "6px", fontSize: "11px", fontWeight: "600", background: "rgba(160,30,30,0.08)", border: "1px solid rgba(160,30,30,0.25)", borderRadius: "5px", color: "#8a1a1a", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace" }}>🗑️ Delete</button>
+                style={{ flex: 1, padding: isMobile ? "10px" : "6px", fontSize: isMobile ? "13px" : "11px", fontWeight: "600", background: "rgba(160,30,30,0.08)", border: "1px solid rgba(160,30,30,0.25)", borderRadius: "5px", color: "#8a1a1a", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", minHeight: isMobile ? "44px" : "auto" }}>🗑️ Delete</button>
             </div>
           )}
         </div>
@@ -486,40 +501,72 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
   };
 
   /* ── Flat Column View (only view now) ── */
-  const renderListView = () => (
-    <div style={{ display: "flex", gap: "16px", padding: "20px", overflowX: "auto", minHeight: "calc(100vh - 110px)" }}>
-      {COLUMNS.map(col => {
-        const colCards = cards.filter(c => c.column === col.id);
-        const zoneId = `col-${col.id}`;
-        const isZoneOver = dropTarget?.zone === zoneId;
-        return (
-          <div key={col.id} onDragOver={(e) => handleZoneDragOver(e, zoneId)} onDragLeave={() => setDropTarget(prev => prev?.zone === zoneId ? null : prev)} onDrop={(e) => handleZoneDropFlat(e, col.id)}
-            style={{ flex: "1 0 260px", maxWidth: "360px", minWidth: "260px", background: isZoneOver ? "linear-gradient(180deg, rgba(154,109,0,0.08) 0%, rgba(245,238,214,0.6) 100%)" : "linear-gradient(180deg, rgba(240,232,208,0.5) 0%, rgba(232,223,194,0.35) 100%)", borderRadius: "12px", border: isZoneOver ? "1px solid rgba(120,90,20,0.3)" : "1px solid rgba(100,80,20,0.12)", transition: "all 0.3s ease", display: "flex", flexDirection: "column", boxShadow: "0 2px 8px rgba(100,80,20,0.06)" }}>
-            <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(100,80,20,0.1)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
-                  <span style={{ fontSize: "16px" }}>{col.icon}</span>
-                  <div>
-                    <h2 style={{ margin: 0, fontSize: "12px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{col.title}</h2>
-                    <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#6a5530", fontWeight: "500", letterSpacing: "1px" }}>{col.subtitle}</p>
-                  </div>
-                </div>
-                <span style={{ background: "rgba(154,109,0,0.1)", borderRadius: "50%", width: "26px", height: "26px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#3d2a08", fontWeight: "bold" }}>{colCards.length}</span>
+  const renderListView = () => {
+    if (isMobile) {
+      const activeCol = COLUMNS.find(c => c.id === activeTab);
+      const colCards = cards.filter(c => c.column === activeTab);
+      const zoneId = `col-${activeTab}`;
+      const isZoneOver = dropTarget?.zone === zoneId;
+      return (
+        <div style={{ padding: "0" }}
+          onDragOver={(e) => handleZoneDragOver(e, zoneId)}
+          onDragLeave={() => setDropTarget(prev => prev?.zone === zoneId ? null : prev)}
+          onDrop={(e) => handleZoneDropFlat(e, activeTab)}>
+          <div style={{ padding: "12px 16px 24px" }}>
+            {activeCol && (
+              <div style={{ padding: "10px 0 8px", marginBottom: "4px" }}>
+                <h2 style={{ margin: 0, fontSize: "13px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{activeCol.title}</h2>
+                <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#6a5530", fontWeight: "500", letterSpacing: "1px" }}>{activeCol.subtitle}</p>
               </div>
-            </div>
-            <div style={{ flex: 1, padding: "8px", display: "flex", flexDirection: "column", gap: "6px", overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
-              {colCards.map(card => renderCard(card, col.id))}
+            )}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {colCards.map(card => renderCard(card, activeTab))}
               {isZoneOver && colCards.length === 0 && <DropIndicator />}
-              <button onClick={() => openAddModal(col.id)}
-                style={{ width: "100%", padding: "8px", background: "transparent", border: "1px dashed rgba(100,80,20,0.18)", borderRadius: "6px", color: "#8a7a58", cursor: "pointer", fontSize: "12px", fontWeight: "600", fontFamily: "'Courier New', monospace", transition: "all 0.3s" }}
-                onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(120,90,20,0.4)"; e.currentTarget.style.color = "#4a3a18"; e.currentTarget.style.background = "rgba(154,109,0,0.04)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(100,80,20,0.18)"; e.currentTarget.style.color = "#8a7a58"; e.currentTarget.style.background = "transparent"; }}>+ NEW EXPEDITION</button>
+              <button onClick={() => openAddModal(activeTab)}
+                style={{ width: "100%", padding: "14px", background: "transparent", border: "1px dashed rgba(100,80,20,0.18)", borderRadius: "6px", color: "#8a7a58", cursor: "pointer", fontSize: "13px", fontWeight: "600", fontFamily: "'Courier New', monospace", transition: "all 0.3s", minHeight: "48px" }}>
+                + NEW EXPEDITION
+              </button>
             </div>
           </div>
-        );
-      })}
-    </div>
-  );
+        </div>
+      );
+    }
+
+    return (
+      <div style={{ display: "flex", gap: "16px", padding: "20px", overflowX: "auto", minHeight: "calc(100vh - 110px)" }}>
+        {COLUMNS.map(col => {
+          const colCards = cards.filter(c => c.column === col.id);
+          const zoneId = `col-${col.id}`;
+          const isZoneOver = dropTarget?.zone === zoneId;
+          return (
+            <div key={col.id} onDragOver={(e) => handleZoneDragOver(e, zoneId)} onDragLeave={() => setDropTarget(prev => prev?.zone === zoneId ? null : prev)} onDrop={(e) => handleZoneDropFlat(e, col.id)}
+              style={{ flex: "1 0 260px", maxWidth: "360px", minWidth: "260px", background: isZoneOver ? "linear-gradient(180deg, rgba(154,109,0,0.08) 0%, rgba(245,238,214,0.6) 100%)" : "linear-gradient(180deg, rgba(240,232,208,0.5) 0%, rgba(232,223,194,0.35) 100%)", borderRadius: "12px", border: isZoneOver ? "1px solid rgba(120,90,20,0.3)" : "1px solid rgba(100,80,20,0.12)", transition: "all 0.3s ease", display: "flex", flexDirection: "column", boxShadow: "0 2px 8px rgba(100,80,20,0.06)" }}>
+              <div style={{ padding: "14px 14px 10px", borderBottom: "1px solid rgba(100,80,20,0.1)" }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                    <span style={{ fontSize: "16px" }}>{col.icon}</span>
+                    <div>
+                      <h2 style={{ margin: 0, fontSize: "12px", fontWeight: "bold", letterSpacing: "1.5px", color: "#3d2a08", fontFamily: "'Georgia', serif" }}>{col.title}</h2>
+                      <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#6a5530", fontWeight: "500", letterSpacing: "1px" }}>{col.subtitle}</p>
+                    </div>
+                  </div>
+                  <span style={{ background: "rgba(154,109,0,0.1)", borderRadius: "50%", width: "26px", height: "26px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", color: "#3d2a08", fontWeight: "bold" }}>{colCards.length}</span>
+                </div>
+              </div>
+              <div style={{ flex: 1, padding: "8px", display: "flex", flexDirection: "column", gap: "6px", overflowY: "auto", maxHeight: "calc(100vh - 220px)" }}>
+                {colCards.map(card => renderCard(card, col.id))}
+                {isZoneOver && colCards.length === 0 && <DropIndicator />}
+                <button onClick={() => openAddModal(col.id)}
+                  style={{ width: "100%", padding: "8px", background: "transparent", border: "1px dashed rgba(100,80,20,0.18)", borderRadius: "6px", color: "#8a7a58", cursor: "pointer", fontSize: "12px", fontWeight: "600", fontFamily: "'Courier New', monospace", transition: "all 0.3s" }}
+                  onMouseEnter={(e) => { e.currentTarget.style.borderColor = "rgba(120,90,20,0.4)"; e.currentTarget.style.color = "#4a3a18"; e.currentTarget.style.background = "rgba(154,109,0,0.04)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.borderColor = "rgba(100,80,20,0.18)"; e.currentTarget.style.color = "#8a7a58"; e.currentTarget.style.background = "transparent"; }}>+ NEW EXPEDITION</button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   /* ── Loading screen ── */
   if (loading) {
@@ -554,12 +601,11 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 0, background: `radial-gradient(ellipse at 20% 50%, rgba(184,134,11,0.06) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(160,82,45,0.05) 0%, transparent 40%), radial-gradient(ellipse at 50% 80%, rgba(139,109,20,0.04) 0%, transparent 50%)` }} />
       <div style={{ position: "fixed", bottom: "-100px", right: "-100px", width: "400px", height: "400px", opacity: 0.06, fontSize: "400px", pointerEvents: "none", zIndex: 0 }}>🧭</div>
 
-      <header style={{ position: "sticky", top: 0, zIndex: 20, padding: "18px 28px 14px", borderBottom: "2px solid rgba(100,80,20,0.22)", background: "linear-gradient(180deg, rgba(245,238,214,0.98) 0%, rgba(239,228,200,0.95) 100%)", backdropFilter: "blur(8px)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div style={{ fontSize: "32px", filter: "drop-shadow(0 2px 4px rgba(100,80,20,0.2))", animation: "float 3s ease-in-out infinite" }}>🏺</div>
-            <div>
-              {/* ── Editable Title ── */}
+      <header style={{ position: "sticky", top: 0, zIndex: 20, padding: isMobile ? "10px 16px 0" : "18px 28px 14px", borderBottom: "2px solid rgba(100,80,20,0.22)", background: "linear-gradient(180deg, rgba(245,238,214,0.98) 0%, rgba(239,228,200,0.95) 100%)", backdropFilter: "blur(8px)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: isMobile ? "8px" : "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "10px" : "14px", minWidth: 0, flex: 1 }}>
+            <div style={{ fontSize: isMobile ? "24px" : "32px", filter: "drop-shadow(0 2px 4px rgba(100,80,20,0.2))", animation: "float 3s ease-in-out infinite", flexShrink: 0 }}>🏺</div>
+            <div style={{ minWidth: 0 }}>
               {editingTitle ? (
                 <input
                   ref={titleInputRef}
@@ -568,11 +614,11 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
                   onBlur={handleTitleBlur}
                   onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
                   style={{
-                    margin: 0, fontSize: "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
-                    color: "#3d2a08", letterSpacing: "3px", textTransform: "uppercase",
+                    margin: 0, fontSize: isMobile ? "15px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    color: "#3d2a08", letterSpacing: isMobile ? "1px" : "3px", textTransform: "uppercase",
                     background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
                     borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
-                    maxWidth: "500px",
+                    maxWidth: isMobile ? "200px" : "500px",
                   }}
                 />
               ) : (
@@ -580,115 +626,138 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
                   onClick={() => setEditingTitle(true)}
                   title="Click to edit"
                   style={{
-                    margin: 0, fontSize: "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
-                    color: "#3d2a08", textShadow: "0 1px 2px rgba(100,80,20,0.1)", letterSpacing: "3px",
+                    margin: 0, fontSize: isMobile ? "15px" : "24px", fontWeight: "bold", fontFamily: "'Georgia', serif",
+                    color: "#3d2a08", textShadow: "0 1px 2px rgba(100,80,20,0.1)", letterSpacing: isMobile ? "1px" : "3px",
                     textTransform: "uppercase", cursor: "pointer", borderBottom: "1px dashed transparent",
-                    transition: "border-color 0.2s",
+                    transition: "border-color 0.2s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = "rgba(100,80,20,0.3)"}
                   onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = "transparent"}
                 >{boardTitle}</h1>
               )}
-              {/* ── Editable Subtitle ── */}
-              {editingSubtitle ? (
-                <input
-                  ref={subtitleInputRef}
-                  value={boardSubtitle}
-                  onChange={(e) => setBoardSubtitle(e.target.value)}
-                  onBlur={handleSubtitleBlur}
-                  onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
-                  style={{
-                    margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
-                    textTransform: "uppercase", fontWeight: "500",
-                    background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
-                    borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
-                    maxWidth: "400px", fontFamily: "'Courier New', monospace",
-                  }}
-                />
-              ) : (
-                <p
-                  onClick={() => setEditingSubtitle(true)}
-                  title="Click to edit"
-                  style={{
-                    margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
-                    textTransform: "uppercase", fontWeight: "500", cursor: "pointer",
-                    borderBottom: "1px dashed transparent", transition: "border-color 0.2s",
-                    display: "inline-block",
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = "rgba(100,80,20,0.3)"}
-                  onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = "transparent"}
-                >{boardSubtitle}</p>
+              {!isMobile && (
+                editingSubtitle ? (
+                  <input
+                    ref={subtitleInputRef}
+                    value={boardSubtitle}
+                    onChange={(e) => setBoardSubtitle(e.target.value)}
+                    onBlur={handleSubtitleBlur}
+                    onKeyDown={(e) => { if (e.key === "Enter") e.target.blur(); }}
+                    style={{
+                      margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
+                      textTransform: "uppercase", fontWeight: "500",
+                      background: "rgba(255,253,245,0.8)", border: "1px solid rgba(120,90,20,0.3)",
+                      borderRadius: "4px", padding: "2px 8px", outline: "none", width: "100%",
+                      maxWidth: "400px", fontFamily: "'Courier New', monospace",
+                    }}
+                  />
+                ) : (
+                  <p
+                    onClick={() => setEditingSubtitle(true)}
+                    title="Click to edit"
+                    style={{
+                      margin: "3px 0 0", fontSize: "12px", letterSpacing: "3px", color: "#6a5530",
+                      textTransform: "uppercase", fontWeight: "500", cursor: "pointer",
+                      borderBottom: "1px dashed transparent", transition: "border-color 0.2s",
+                      display: "inline-block",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.borderBottomColor = "rgba(100,80,20,0.3)"}
+                    onMouseLeave={(e) => e.currentTarget.style.borderBottomColor = "transparent"}
+                  >{boardSubtitle}</p>
+                )
               )}
             </div>
           </div>
-          <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
-            {!demoMode && <SaveIndicator />}
-            {[
-              { label: "Dreaming", val: stats.dreams, color: "#8a6508" },
-              { label: "Planning", val: stats.planning, color: "#6a5010" },
-              { label: "Booked", val: stats.booked, color: "#1a6a3a" },
-              { label: "Conquered", val: stats.completed, color: "#6e3a18" },
-            ].map(s => (
-              <div key={s.label} style={{ textAlign: "center" }}>
-                <div style={{ fontSize: "22px", fontWeight: "bold", color: s.color, fontFamily: "'Georgia', serif" }}>{s.val}</div>
-                <div style={{ fontSize: "10px", fontWeight: "600", letterSpacing: "1.5px", color: "#5a4828", textTransform: "uppercase" }}>{s.label}</div>
-              </div>
-            ))}
-            {/* User & Sign Out / Demo exit */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "4px", paddingLeft: "16px", borderLeft: "1px solid rgba(100,80,20,0.15)" }}>
-              <div style={{ textAlign: "right" }}>
-                <div style={{ fontSize: "11px", fontWeight: "600", color: "#3d2a08", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{demoMode ? "Demo Explorer" : (user?.email || "Explorer")}</div>
-                <div style={{ fontSize: "9px", color: "#8a7a58", letterSpacing: "1px", textTransform: "uppercase" }}>{demoMode ? "DEMO MODE" : "ADVENTURER"}</div>
-              </div>
+          {isMobile ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+              {!demoMode && <SaveIndicator />}
               {demoMode ? (
                 <button onClick={() => onSignOut?.()}
-                  style={{
-                    padding: "6px 12px", fontSize: "10px", fontWeight: "700",
-                    background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)",
-                    border: "2px solid rgba(154,109,0,0.35)",
-                    borderRadius: "5px", color: "#3d2a08", cursor: "pointer",
-                    letterSpacing: "1px", textTransform: "uppercase",
-                    fontFamily: "'Courier New', monospace", transition: "all 0.2s",
-                    whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.25) 0%, rgba(120,85,10,0.25) 100%)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)"; }}
-                >📜 Sign Up</button>
+                  style={{ padding: "8px 12px", fontSize: "11px", fontWeight: "700", background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "5px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", whiteSpace: "nowrap", minHeight: "44px" }}>
+                  📜 Sign Up</button>
               ) : (
                 <button onClick={async () => { await signOut(); onSignOut?.(); }}
-                  style={{
-                    padding: "6px 12px", fontSize: "10px", fontWeight: "700",
-                    background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)",
-                    borderRadius: "5px", color: "#8a1a1a", cursor: "pointer",
-                    letterSpacing: "1px", textTransform: "uppercase",
-                    fontFamily: "'Courier New', monospace", transition: "all 0.2s",
-                    whiteSpace: "nowrap",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.12)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.35)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.06)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.2)"; }}
-                >🚪 Sign Out</button>
+                  style={{ padding: "8px 12px", fontSize: "13px", fontWeight: "700", background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)", borderRadius: "5px", color: "#8a1a1a", cursor: "pointer", fontFamily: "'Courier New', monospace", whiteSpace: "nowrap", minHeight: "44px", minWidth: "44px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  🚪</button>
               )}
             </div>
-          </div>
+          ) : (
+            <div style={{ display: "flex", gap: "16px", alignItems: "center", flexWrap: "wrap" }}>
+              {!demoMode && <SaveIndicator />}
+              {[
+                { label: "Dreaming", val: stats.dreams, color: "#8a6508" },
+                { label: "Planning", val: stats.planning, color: "#6a5010" },
+                { label: "Booked", val: stats.booked, color: "#1a6a3a" },
+                { label: "Conquered", val: stats.completed, color: "#6e3a18" },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "22px", fontWeight: "bold", color: s.color, fontFamily: "'Georgia', serif" }}>{s.val}</div>
+                  <div style={{ fontSize: "10px", fontWeight: "600", letterSpacing: "1.5px", color: "#5a4828", textTransform: "uppercase" }}>{s.label}</div>
+                </div>
+              ))}
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginLeft: "4px", paddingLeft: "16px", borderLeft: "1px solid rgba(100,80,20,0.15)" }}>
+                <div style={{ textAlign: "right" }}>
+                  <div style={{ fontSize: "11px", fontWeight: "600", color: "#3d2a08", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{demoMode ? "Demo Explorer" : (user?.email || "Explorer")}</div>
+                  <div style={{ fontSize: "9px", color: "#8a7a58", letterSpacing: "1px", textTransform: "uppercase" }}>{demoMode ? "DEMO MODE" : "ADVENTURER"}</div>
+                </div>
+                {demoMode ? (
+                  <button onClick={() => onSignOut?.()}
+                    style={{ padding: "6px 12px", fontSize: "10px", fontWeight: "700", background: "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "5px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", transition: "all 0.2s", whiteSpace: "nowrap" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.25) 0%, rgba(120,85,10,0.25) 100%)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "linear-gradient(135deg, rgba(154,109,0,0.15) 0%, rgba(120,85,10,0.15) 100%)"; }}
+                  >📜 Sign Up</button>
+                ) : (
+                  <button onClick={async () => { await signOut(); onSignOut?.(); }}
+                    style={{ padding: "6px 12px", fontSize: "10px", fontWeight: "700", background: "rgba(138,26,26,0.06)", border: "1px solid rgba(138,26,26,0.2)", borderRadius: "5px", color: "#8a1a1a", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", transition: "all 0.2s", whiteSpace: "nowrap" }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.12)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.35)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(138,26,26,0.06)"; e.currentTarget.style.borderColor = "rgba(138,26,26,0.2)"; }}
+                  >🚪 Sign Out</button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+        {/* ── Mobile Tab Bar (column navigation) ── */}
+        {isMobile && (
+          <div style={{ display: "flex", marginTop: "8px", borderTop: "1px solid rgba(100,80,20,0.1)" }}>
+            {COLUMNS.map(col => {
+              const count = cards.filter(c => c.column === col.id).length;
+              const isActive = activeTab === col.id;
+              return (
+                <button key={col.id} onClick={() => setActiveTab(col.id)}
+                  style={{
+                    flex: 1, padding: "8px 4px 6px", display: "flex", flexDirection: "column", alignItems: "center", gap: "1px",
+                    background: "transparent", border: "none", borderBottom: isActive ? "2px solid #8a6508" : "2px solid transparent",
+                    cursor: "pointer", transition: "all 0.2s", opacity: isActive ? 1 : 0.5,
+                  }}>
+                  <span style={{ fontSize: "16px", lineHeight: 1 }}>{col.icon}</span>
+                  <span style={{ fontSize: "8px", fontWeight: "700", letterSpacing: "0.5px", color: isActive ? "#3d2a08" : "#6a5530", textTransform: "uppercase", fontFamily: "'Courier New', monospace", lineHeight: 1.2 }}>
+                    {col.id === "dreams" ? "Dreams" : col.id === "planning" ? "Plan" : col.id === "booked" ? "Booked" : "Done"} ({count})
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       {demoMode && (
         <div style={{
-          padding: "8px 28px", background: "linear-gradient(90deg, rgba(154,109,0,0.12) 0%, rgba(120,85,10,0.08) 100%)",
+          padding: isMobile ? "8px 16px" : "8px 28px", background: "linear-gradient(90deg, rgba(154,109,0,0.12) 0%, rgba(120,85,10,0.08) 100%)",
           borderBottom: "1px solid rgba(154,109,0,0.2)",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: "10px",
-          fontSize: "12px", color: "#5a4000", fontWeight: "600", letterSpacing: "0.5px",
+          display: "flex", alignItems: "center", justifyContent: "center", gap: isMobile ? "6px" : "10px",
+          fontSize: isMobile ? "11px" : "12px", color: "#5a4000", fontWeight: "600", letterSpacing: "0.5px",
+          flexWrap: "wrap",
         }}>
           <span>🧭</span>
-          <span>You're exploring in demo mode — changes are temporary and won't be saved.</span>
+          <span>{isMobile ? "Demo mode — changes won't be saved." : "You're exploring in demo mode — changes are temporary and won't be saved."}</span>
           <button onClick={() => onSignOut?.()}
             style={{
-              padding: "4px 12px", fontSize: "10px", fontWeight: "700",
+              padding: isMobile ? "6px 12px" : "4px 12px", fontSize: "10px", fontWeight: "700",
               background: "rgba(154,109,0,0.12)", border: "1px solid rgba(154,109,0,0.3)",
               borderRadius: "4px", color: "#3d2a08", cursor: "pointer",
               letterSpacing: "1px", textTransform: "uppercase",
-              fontFamily: "'Courier New', monospace",
+              fontFamily: "'Courier New', monospace", minHeight: isMobile ? "36px" : "auto",
             }}
           >Create Account</button>
         </div>
@@ -697,8 +766,8 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
       {renderListView()}
 
       {showModal && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(60,48,20,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px", animation: "fadeIn 0.2s ease" }} onClick={() => setShowModal(false)}>
-          <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(135deg, #fdfaf0 0%, #f2ebd4 100%)", border: "1px solid rgba(100,80,20,0.22)", borderRadius: "12px", padding: "28px", width: "100%", maxWidth: "480px", boxShadow: "0 24px 64px rgba(60,48,20,0.25)", animation: "slideUp 0.3s ease", maxHeight: "90vh", overflowY: "auto" }}>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(60,48,20,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: isMobile ? "flex-end" : "center", justifyContent: "center", padding: isMobile ? "0" : "20px", animation: "fadeIn 0.2s ease" }} onClick={() => setShowModal(false)}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "linear-gradient(135deg, #fdfaf0 0%, #f2ebd4 100%)", border: "1px solid rgba(100,80,20,0.22)", borderRadius: isMobile ? "16px 16px 0 0" : "12px", padding: isMobile ? "20px 16px" : "28px", width: "100%", maxWidth: isMobile ? "100%" : "480px", boxShadow: "0 24px 64px rgba(60,48,20,0.25)", animation: isMobile ? "slideUpModal 0.3s ease" : "slideUp 0.3s ease", maxHeight: isMobile ? "92vh" : "90vh", overflowY: "auto" }}>
             <h2 style={{ margin: "0 0 20px", fontSize: "20px", fontFamily: "'Georgia', serif", color: "#3d2a08", letterSpacing: "2px", textTransform: "uppercase" }}>{editCard ? "📜 EDIT EXPEDITION" : "🗺️ NEW EXPEDITION"}</h2>
             {[
               { key: "title", label: "Destination", placeholder: "e.g. The Temple of Doom, India" },
@@ -793,10 +862,10 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
 
             <div style={{ marginBottom: "14px" }}>
               <label style={{ display: "block", fontSize: "11px", fontWeight: "700", color: "#4a3a18", letterSpacing: "2px", textTransform: "uppercase", marginBottom: "6px" }}>Region</label>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(125px, 1fr))", gap: "6px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: `repeat(auto-fill, minmax(${isMobile ? "100px" : "125px"}, 1fr))`, gap: "6px" }}>
                 {CONTINENTS.map(cont => (
                   <button key={cont.id} onClick={() => setFormData(p => ({ ...p, continent: cont.id }))}
-                    style={{ padding: "8px 8px", fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", background: formData.continent === cont.id ? `${cont.color}1a` : "rgba(255,253,245,0.6)", border: formData.continent === cont.id ? `2px solid ${cont.color}70` : "1px solid rgba(100,80,20,0.12)", borderRadius: "6px", cursor: "pointer", color: formData.continent === cont.id ? cont.color : "#5a4828", fontFamily: "'Courier New', monospace", transition: "all 0.2s" }}>
+                    style={{ padding: isMobile ? "10px 8px" : "8px 8px", fontSize: "12px", fontWeight: "600", display: "flex", alignItems: "center", gap: "6px", background: formData.continent === cont.id ? `${cont.color}1a` : "rgba(255,253,245,0.6)", border: formData.continent === cont.id ? `2px solid ${cont.color}70` : "1px solid rgba(100,80,20,0.12)", borderRadius: "6px", cursor: "pointer", color: formData.continent === cont.id ? cont.color : "#5a4828", fontFamily: "'Courier New', monospace", transition: "all 0.2s", minHeight: isMobile ? "44px" : "auto" }}>
                     <span>{cont.icon}</span> {cont.name}
                   </button>
                 ))}
@@ -807,7 +876,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {COLUMNS.map(col => (
                   <button key={col.id} onClick={() => setFormData(p => ({ ...p, column: col.id }))}
-                    style={{ flex: 1, padding: "8px 6px", fontSize: "11px", fontWeight: "600", background: formData.column === col.id ? "rgba(154,109,0,0.12)" : "rgba(255,253,245,0.6)", border: formData.column === col.id ? "2px solid rgba(154,109,0,0.4)" : "1px solid rgba(100,80,20,0.12)", borderRadius: "6px", cursor: "pointer", color: formData.column === col.id ? "#4a3a08" : "#5a4828", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", transition: "all 0.2s", minWidth: "60px" }}>{col.icon} {col.id}</button>
+                    style={{ flex: 1, padding: isMobile ? "10px 6px" : "8px 6px", fontSize: "11px", fontWeight: "600", background: formData.column === col.id ? "rgba(154,109,0,0.12)" : "rgba(255,253,245,0.6)", border: formData.column === col.id ? "2px solid rgba(154,109,0,0.4)" : "1px solid rgba(100,80,20,0.12)", borderRadius: "6px", cursor: "pointer", color: formData.column === col.id ? "#4a3a08" : "#5a4828", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", transition: "all 0.2s", minWidth: "60px", minHeight: isMobile ? "44px" : "auto" }}>{col.icon} {col.id}</button>
                 ))}
               </div>
             </div>
@@ -818,8 +887,8 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
               </div>
             )}
             <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: "11px", fontSize: "12px", fontWeight: "600", background: "transparent", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "6px", color: "#5a4828", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace" }}>RETREAT</button>
-              <button onClick={saveCard} style={{ flex: 1, padding: "11px", fontSize: "12px", fontWeight: "bold", background: "linear-gradient(135deg, rgba(154,109,0,0.18) 0%, rgba(120,85,10,0.18) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "6px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace" }}>⚡ {editCard ? "UPDATE" : "EMBARK"}</button>
+              <button onClick={() => setShowModal(false)} style={{ flex: 1, padding: isMobile ? "14px" : "11px", fontSize: isMobile ? "13px" : "12px", fontWeight: "600", background: "transparent", border: "1px solid rgba(100,80,20,0.2)", borderRadius: "6px", color: "#5a4828", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", minHeight: isMobile ? "48px" : "auto" }}>RETREAT</button>
+              <button onClick={saveCard} style={{ flex: 1, padding: isMobile ? "14px" : "11px", fontSize: isMobile ? "13px" : "12px", fontWeight: "bold", background: "linear-gradient(135deg, rgba(154,109,0,0.18) 0%, rgba(120,85,10,0.18) 100%)", border: "2px solid rgba(154,109,0,0.35)", borderRadius: "6px", color: "#3d2a08", cursor: "pointer", letterSpacing: "1px", textTransform: "uppercase", fontFamily: "'Courier New', monospace", minHeight: isMobile ? "48px" : "auto" }}>⚡ {editCard ? "UPDATE" : "EMBARK"}</button>
             </div>
           </div>
         </div>
@@ -830,6 +899,7 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUpModal { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: translateY(0); } }
         @keyframes pulseBar { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -837,6 +907,12 @@ export default function VacationPlanner({ user, onSignOut, demoMode = false }) {
         ::-webkit-scrollbar-thumb:hover { background: rgba(100,80,20,0.28); }
         ::placeholder { color: #9a8a68 !important; }
         textarea:focus, input:focus { border-color: rgba(120,90,20,0.4) !important; box-shadow: 0 0 0 3px rgba(154,109,0,0.08); }
+        @media (max-width: 768px) {
+          body { -webkit-text-size-adjust: 100%; }
+        }
+        @media (max-width: 480px) {
+          body { font-size: 14px; }
+        }
       `}</style>
     </div>
   );
